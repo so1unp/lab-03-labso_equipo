@@ -5,7 +5,8 @@ void handler(int sig)
     printf("%d: %s\n", sig, strsignal(sig));
 }
 
-int main(int argc, char *argv[])
+// int main(int argc, char *argv[])
+int main()
 {
     // refactoring: implementar con sigaction
     // signal(SIGTERM, handler);
@@ -13,8 +14,13 @@ int main(int argc, char *argv[])
     struct sigaction sa;
     sa.sa_handler = handler;
 
+
+    // usar siguientes lineas de comando para probar: 
+    //  kill -8 $(ps | grep sigcatch | awk '{print $1}')
+    //  kill -15 $(ps | grep sigcatch | awk '{print $1}')
     sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGFPE, &sa, NULL); // averiguar porque null
+    sigaction(SIGFPE, &sa, NULL); 
+    // averiguar porque null
 
     while (1)
     {
