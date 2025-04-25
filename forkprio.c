@@ -2,51 +2,86 @@
 #include <stdlib.h>
 #include <sys/times.h> // times()
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/resource.h>
 
-#define SEGUNDOS 3
-
+// funcion invocada por los procesos hijos
 int busywork(void)
 {
     struct tms buf;
-    for ( // site_t i=0
-        ; // 0 < n
-        ; // i++
-    )
+    for (;;)
     {
         times(&buf);
     }
 }
-void catch_alarm(int sig_num)
+void handler(int sig)
 {
-    printf("\nDemoraste demasiado!. Me estoy yendo...\n");
+    int prioridad = getpriority(PRIO_PROCESS, 0);
+    printf("Child %d (nice %2d):\t%3li\n", getpid(), prioridad);
     exit(0);
 }
 
-// crear un n procesos hijos, con prioridad progresivamente mas baja
+// se debe envíar una señal de terminación (SIGTERM) a todos los procesos hijos
+void terminar(int pid)
+{
+    kill(pid, SIGTERM);
+}
+
 int main(int argc, char *argv[])
 {
-    // arg 1: n hijos a crear
-    // arg 2: seg. de ejecucion, 0 indefinido
-    // arg 3: si reducen las prioridades (1?)
-    if (argc - 1 != 3)
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (argc != 4)
     {
+        fprintf(stderr, "Uso: %s <num_hijos> <segundos_ejecucion> <reduccion_prioridad>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    // usar
-    // fork() crear un proceso
-    // setpriority() / nice() | getpriority()
-    // sleep()
-    // kill()
+    int _hijos = atoi(argv[1]);    // arg 1: numero procesos hijos
+    int _segundos = atoi(argv[2]); // arg 2: segundos que deben ejecutar, 0 indefinido
+    int _prio = atoi(argv[3]);     // arg 3: si reducen las prioridades (1?)
+    int hijos[_hijos];
+    for (int i = 0; i < _hijos; i++)
+    {
+        pid_t child_pid = fork();
+        if (child_pid < 0)
+        {
+            perror("error");
+            exit(EXIT_FAILURE);
+        }
+        if (child_pid == 0)
+        {
+            sigaction(SIGTERM, &sa, NULL);
+            if (_prio)
+            {
+                if (nice(i) == -1)
+                {
+                    perror("Error al asignar prioridad");
+                }
+            }
+            busywork();
+        }
+        else
+        {
+            hijos[i] = child_pid;
+        }
+    }
 
-    struct sigaction sa;
-    sa.sa_handler = catch_alarm;
-    sigaction(SIGALRM, &sa, NULL);
-    alarm(atoi(argv[2]));
+    sleep(3);
+    printf("Padre: enviando SIGTERM a todos los hijos...\n");
 
-    // printf("Child %d (nice %2d):\t%3li\n");
-    pause();
-    // Luego de un cierto número de segundos se debe envíar una señal de terminación (SIGTERM) a todos los procesos hijos.
-    //  solucion alarm(cant_seg)
+    for (int i = 0; i < _hijos; i++)
+    {
+        terminar(hijos[i]);
+    }
+    for (int i = 0; i < _hijos; i++)
+    {
+        wait(NULL);
+    }
+
+    sleep(10);
+
     exit(EXIT_SUCCESS);
 }
