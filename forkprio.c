@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/times.h> // times()
 #include <signal.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/resource.h>
 
@@ -14,10 +15,16 @@ int busywork(void)
         times(&buf);
     }
 }
+
 void handler(int sig)
 {
     int prioridad = getpriority(PRIO_PROCESS, 0);
-    printf("Child %d (nice %2d):\t%3li\n", getpid(), prioridad);
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+
+    long sum = usage.ru_utime.tv_sec + usage.ru_stime.tv_sec;
+
+    printf("Child %d (nice %2d):\t%3li\n", getpid(), prioridad, sum);
     exit(0);
 }
 
@@ -31,11 +38,11 @@ int main(int argc, char *argv[])
 {
     struct sigaction sa;
     sa.sa_handler = handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
+    // sigemptyset(&sa.sa_mask);
+    // sa.sa_flags = 0;
     if (argc != 4)
     {
-        fprintf(stderr, "Uso: %s <num_hijos> <segundos_ejecucion> <reduccion_prioridad>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <num_hijos> <segundos_ejecucion> <reduccion_prioridad>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -43,6 +50,7 @@ int main(int argc, char *argv[])
     int _segundos = atoi(argv[2]); // arg 2: segundos que deben ejecutar, 0 indefinido
     int _prio = atoi(argv[3]);     // arg 3: si reducen las prioridades (1?)
     int hijos[_hijos];
+
     for (int i = 0; i < _hijos; i++)
     {
         pid_t child_pid = fork();
@@ -69,8 +77,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    sleep(3);
-    printf("Padre: enviando SIGTERM a todos los hijos...\n");
+    // implementar la ejecucion indefinida
+    sleep(_segundos);
 
     for (int i = 0; i < _hijos; i++)
     {
@@ -80,8 +88,6 @@ int main(int argc, char *argv[])
     {
         wait(NULL);
     }
-
-    sleep(10);
 
     exit(EXIT_SUCCESS);
 }
