@@ -6,6 +6,7 @@
 
 void test_fork(int count, int wait);
 void test_thread(int count, int wait);
+void *do_nothing(void){ pthread_exit(NULL); }
 
 int main(int argc, char *argv[]) 
 {
@@ -62,6 +63,22 @@ int main(int argc, char *argv[])
 //==========================================================================
 void test_fork(int count, int wait)
 {
+    pid_t child_pid;
+    int status;
+    for (int i = 0; i < count; i++){        
+
+        // Child 
+        if((child_pid = fork()) == 0){ 
+            exit(EXIT_SUCCESS);
+        }
+
+        // Parent
+        else { 
+            if (wait) { 
+                waitpid(child_pid, &status, 0);
+            }
+        }
+    }
 }
 
 //==========================================================================
@@ -70,4 +87,16 @@ void test_fork(int count, int wait)
 
 void test_thread(int count, int wait) 
 {
+    pthread_t threads_id[count];
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+
+    for (int i = 0; i < count; i++){        
+
+        // Threads 
+        pthread_create(&threads_id[i], &attr, (void *) do_nothing, NULL);
+        if (wait) { 
+            pthread_join(threads_id[i],NULL);
+        }
+    }
 }
