@@ -6,7 +6,6 @@
 
 void test_fork(int count, int wait);
 void test_thread(int count, int wait);
-void *do_nothing(void){ pthread_exit(NULL); }
 
 int main(int argc, char *argv[]) 
 {
@@ -94,7 +93,7 @@ void test_thread(int count, int wait)
     for (int i = 0; i < count; i++){        
 
         // Threads 
-        pthread_create(&threads_id[i], &attr, (void *) do_nothing, NULL);
+        pthread_create(&threads_id[i], &attr, (void *) pthread_exit, NULL);
         if (wait) { 
             pthread_join(threads_id[i],NULL);
         }
