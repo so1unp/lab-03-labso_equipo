@@ -32,6 +32,10 @@ void *write_buffer(void *thread_id) {
     pthread_exit(NULL);
 }
 
+void * runner(void * thread_id){
+    perror("Hilo ejecutado");
+}
+
 int main(int argc, char *argv[]) {
     int i, sched_policy;
     void *status;
@@ -83,23 +87,37 @@ int main(int argc, char *argv[]) {
     // Indica que al crear un hilo usando attr como parámetros, este debe
     // utilizar la política de planificación indicada en dichos parámetros.
     // COMPLETAR: pthread_attr_setinheritsched()
+    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
 
     // Especifica la política de planificación.
     // COMPLETAR: pthread_attr_setschedpolicy()
+    pthread_attr_setschedpolicy(&attr, sched_policy);
 
     // Indica el nivel de prioridad que tendrá el hilo creado utilizando attr.
     param.sched_priority = 1;
     // COMPLETAR: pthread_attr_setschedparam()
+    pthread_attr_setschedparam(&attr, &param);
 
     // Indica que el hilo creado utilizando el atributo attr debe ejecutar
     // siempre en la CPU 0.
     // COMPLETAR: usar CPU_ZERO, CPU_SET y pthread_attr_setaffinity_np()
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset); // Limpiar
+    CPU_SET(0, &cpuset); // Añadir CPU 0
+    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
 
     // Crea los hilos.
     // COMPLETAR
+    pthread_t threads_id[count];
+    for (i = 0; i < count; i++) {
+        pthread_create(&threads_id[i],&attr,(void*)write_buffer,i);
+    }
 
     // Espera a que terminen todos los hilos.
     // COMPLETAR
+    for (i = 0; i < count; i++) {
+        pthread_join(threads_id[i],NULL);
+    }
 
     // Imprime el buffer.
     for (i = 0; i < count * items; i++) {
@@ -109,3 +127,4 @@ int main(int argc, char *argv[]) {
 
     pthread_exit(NULL);
 }
+
